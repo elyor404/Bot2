@@ -1,4 +1,6 @@
+using System.ComponentModel.DataAnnotations;
 using System.Drawing;
+using System.Security.Cryptography.X509Certificates;
 using System.Text.RegularExpressions;
 using Microsoft.Extensions.Logging;
 using Telegram.Bot;
@@ -23,18 +25,9 @@ namespace Lesson26.BotMessage
         public string? Seed { get; set; }
         public string? Color { get; set; }
         public bool IsColorActive { get; set; } = true;
-        private bool IsValidColor(string input)
-        {
-            if (System.Text.RegularExpressions.Regex.IsMatch(input, "^#?[0-9A-Fa-f]{6}$"))
-                return true;
-            return false;
-        }
-
 
         public async Task SendInlineButtonAsync(ITelegramBotClient botClient, Update update, CancellationToken cancellationToken)
         {
-            logger.LogInformation("💌 New message from {client}", update.Message?.Chat.FirstName);
-
             var keyboardEmoji = new InlineKeyboardMarkup(
             [
                 [
@@ -77,10 +70,10 @@ namespace Lesson26.BotMessage
             if (update.Type == UpdateType.Message && update.Message?.Text is not null)
             {
                 var messageText = update.Message.Text.Trim();
-                logger.LogInformation("Request: {text}", messageText);
 
                 if (messageText.Equals("/start", StringComparison.OrdinalIgnoreCase))
                 {
+                    logger.LogInformation("Request: -start");
                     await botClient.SendMessage(
                         chatId: update.Message.Chat.Id,
                         text: "*Hi👋 Welcome to the bot , If you need instruction select option below :*\n- /help",
@@ -90,6 +83,7 @@ namespace Lesson26.BotMessage
                 }
                 else if (messageText.Equals("/help", StringComparison.OrdinalIgnoreCase))
                 {
+                    logger.LogInformation("Request: -help");
                     await botClient.SendMessage(
                         chatId: update.Message.Chat.Id,
                         text: "*Please choose one of styles below 😇:*",
@@ -100,20 +94,21 @@ namespace Lesson26.BotMessage
                 }
                 else if (IsColorActive == false && Background is "solid")
                 {
-                    if (IsValidColor(update.Message.Text))
+                    IsColorActive = true;
+                    Color = IsValidColor(update.Message.Text);
+                    if (!string.IsNullOrEmpty(Color))
                     {
-                        IsColorActive = true;
-                        string color=update.Message.Text;
-                        Color=color[1..];
-
+                        logger.LogInformation("Request: chosen color is {color}", Color);
                         await botClient.SendMessage(
-                        chatId: update.Message.Chat.Id,
-                        text: "Please enter seed   e.g : Elyor 🫡",
-                        cancellationToken: cancellationToken
-                        );
+                            chatId: update.Message.Chat.Id,
+                            text: "Please enter seed   e.g : Elyor 🫡",
+                            cancellationToken: cancellationToken
+                            );
                     }
                     else
                     {
+                        logger.LogInformation("Invalid color is {color}", Color);
+
                         await botClient.SendMessage(
                         chatId: update.Message.Chat.Id,
                         text: "*❌Invalid color, Write correct color:*",
@@ -128,15 +123,14 @@ namespace Lesson26.BotMessage
                             !string.IsNullOrEmpty(Background) && string.IsNullOrEmpty(Seed))
                 {
                     Seed = update.Message.Text;
-                    logger.LogInformation($"Shu yerda {Background}{Seed}{Style}{Format}");
+                    logger.LogInformation("Reques: Seed is {seed}", Seed);
+
                     if (Background == "transparent")
                     {
                         if (Format == "/svg")
                         {
                             var chatId = update.Message?.Chat.Id ?? update.CallbackQuery?.Message?.Chat.Id ?? 0;
                             var svgUrl = $"https://api.dicebear.com/9.x{Style}/svg?seed={Seed}";
-
-                            logger.LogInformation($"{svgUrl}");
 
                             using var httpClient = new HttpClient();
                             var svgBytes = await httpClient.GetByteArrayAsync(svgUrl, cancellationToken); // SVG ni byte[] ko'rinishida olish
@@ -156,11 +150,12 @@ namespace Lesson26.BotMessage
                         }
                         else if (Format is "/png")
                         {
+                            logger.LogInformation("Request: chosen format is {format}", Format);
                             long chatId = update.CallbackQuery?.Message?.Chat?.Id
                                 ?? update.Message?.Chat?.Id ?? 0;
 
-                            var photoUrl = $"https://api.dicebear.com/9.x{Style}/png?seed={Seed}";
-                            logger.LogInformation(photoUrl);
+                            var photoUrl = $"https://api.dicebear.com/9.x{Style}/png?seed={Seed}&size=1024";
+
                             await botClient.SendPhoto(
                                 chatId: chatId,
                                 photo: photoUrl,
@@ -173,28 +168,23 @@ namespace Lesson26.BotMessage
                                 cancellationToken: cancellationToken
                             );
                         }
-
-
                     }
                     else if (Background is "solid")
                     {
-                        logger.LogInformation("solidni ichidaman 77777777");
                         if (Format is "/svg")
                         {
                             var chatId = update.Message?.Chat.Id ?? update.CallbackQuery?.Message?.Chat.Id ?? 0;
                             var svgUrl = $"https://api.dicebear.com/9.x{Style}/svg?seed={Seed}&backgroundColor={Color}";
-
-
                             using var httpClient = new HttpClient();
                             var svgBytes = await httpClient.GetByteArrayAsync(svgUrl, cancellationToken);
                             using var stream = new MemoryStream(svgBytes);
-
                             await botClient.SendDocument(
                                 chatId: chatId,
                                 document: new InputFileStream(stream, "avatar.svg"),
                                 caption: $"""
                                     🎨 *Style*: `{Style}`
                                     📄 *Format*: `{Format}`
+                                    🏞️ *Background*: `{Background}`
                                     🌱 *Seed*: `{Seed}`
                                     """,
                                 parseMode: ParseMode.Markdown,
@@ -203,21 +193,19 @@ namespace Lesson26.BotMessage
                         }
                         else if (Format is "/png")
                         {
-
-                            var pngUrl = $"https://api.dicebear.com/9.x{Style}/png?seed={Seed}&backgroundColor={Color}";
-                            logger.LogInformation(pngUrl);
+                            var pngUrl = $"https://api.dicebear.com/9.x{Style}/png?seed={Seed}&backgroundColor={Color}&size=1024";
                             await botClient.SendPhoto(
                                 chatId: update.Message.Chat.Id,
                                 photo: pngUrl,
                                 caption: $"""
                                     🎨 *Style*: `{Style}`
                                     📄 *Format*: `{Format}`
+                                    🏞️ *Background*: `{Background}`
                                     🎉 *Seed*: `{Seed}` 
                                     """,
                                 parseMode: ParseMode.Markdown,
                                 cancellationToken: cancellationToken
                             );
-
                         }
                     }
                     Seed = null;
@@ -225,7 +213,7 @@ namespace Lesson26.BotMessage
                     Format = null;
                     Background = null;
                     Color = null;
-
+                    logger.LogInformation("Request: 🎉 All task is done");
                     await botClient.SendMessage(
                     chatId: update.Message!.Chat.Id,
                     text: "*🎉If you want reuse it , select button :*\n- /help",
@@ -248,11 +236,11 @@ namespace Lesson26.BotMessage
                     replyMarkup: null,
                     cancellationToken: cancellationToken
                 );
-                    await botClient.DeleteMessage(
-                    chatId: update.CallbackQuery.Message.Chat.Id,
-                    messageId: update.CallbackQuery.Message.MessageId,
-                    cancellationToken: cancellationToken
-                    );
+                await botClient.DeleteMessage(
+                chatId: update.CallbackQuery.Message.Chat.Id,
+                messageId: update.CallbackQuery.Message.MessageId,
+                cancellationToken: cancellationToken
+                );
 
 
                 if (formats.Contains(request))
@@ -283,14 +271,15 @@ namespace Lesson26.BotMessage
                 }
                 else if (request is "transparent" or "solid")
                 {
-
+                    logger.LogInformation("Request: Background is {background}", request);
                     Background = request;
                     if (Background is "solid")
                     {
                         IsColorActive = false;
                         await botClient.SendMessage(
                         chatId: update.CallbackQuery.Message!.Chat.Id,
-                        text: "Please enter HTML color string ( only hex code allowed): ",
+                        text: "*Please enter color :*\n *e.g: red*",
+                        parseMode: ParseMode.Markdown,
                         cancellationToken: cancellationToken
                         );
                     }
@@ -299,12 +288,46 @@ namespace Lesson26.BotMessage
 
                         await botClient.SendMessage(
                         chatId: update.CallbackQuery.Message!.Chat.Id,
-                        text: "Please enter seed   e.g : Elyor 🫡",
+                        text: "*Please enter seed :*\n *-e.g : Elyor 🫡*",
+                        parseMode: ParseMode.Markdown,
                         cancellationToken: cancellationToken
                         );
                     }
                 }
             }
+
+            string IsValidColor(string color)
+            {
+                var lowerColor = color.ToLower();
+                var colors = new Dictionary<string, string>
+                {
+                    { "white", "FFFFFF" },
+                    { "black", "000000" },
+                    { "red", "FF0000" },
+                    { "green", "00FF00" },
+                    { "blue", "0000FF" },
+                    { "yellow", "FFFF00" },
+                    { "cyan", "00FFFF" },
+                    { "magenta", "FF00FF" },
+                    { "gray", "808080" },
+                    { "lightgray", "D3D3D3" },
+                    { "darkgray", "A9A9A9" },
+                    { "orange", "FFA500" },
+                    { "purple", "800080" },
+                    { "brown", "A52A2A" },
+                    { "pink", "FFC0CB" },
+                    { "lime", "32CD32" },
+                    { "navy", "000080" },
+                    { "teal", "008080" },
+                    { "olive", "808000" },
+                    { "maroon", "800000" }
+                };
+
+                return colors.TryGetValue(lowerColor, out var value) ? value : "";
+
+            }
+
+
         }
 
     }
