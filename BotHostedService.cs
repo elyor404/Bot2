@@ -21,9 +21,9 @@ namespace Lesson26
                 new ReceiverOptions
                 {
                     DropPendingUpdates = true,
-                    AllowedUpdates= null
+                    AllowedUpdates = null
                 },
-                cancellationToken:cancellationToken);
+                cancellationToken: cancellationToken);
         }
 
         public async Task StopAsync(CancellationToken cancellationToken)
