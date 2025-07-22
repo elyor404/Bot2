@@ -18,7 +18,7 @@ class BotUpdateHandler(
     {
         if (update.Type == UpdateType.CallbackQuery)
             logger.LogInformation("💌 new message from {username}", update.CallbackQuery!.Message!.Chat.FirstName);
-        else
+        else if(update.Type == UpdateType.Message)
             logger.LogInformation("💌 new message from {username}", update.Message!.Chat.FirstName);
 
         

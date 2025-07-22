@@ -154,11 +154,11 @@ namespace Lesson26.BotMessage
                             long chatId = update.CallbackQuery?.Message?.Chat?.Id
                                 ?? update.Message?.Chat?.Id ?? 0;
 
-                            var photoUrl = $"https://api.dicebear.com/9.x{Style}/png?seed={Seed}&size=1024";
+                            var url = $"https://api.dicebear.com/9.x{Style}/png?seed={Seed}&size=1024";
 
                             await botClient.SendPhoto(
                                 chatId: chatId,
-                                photo: photoUrl,
+                                photo: url,
                                 caption: $"""
                                     🎨 *Style*: `{Style}`
                                     📄 *Format*: `{Format}`
