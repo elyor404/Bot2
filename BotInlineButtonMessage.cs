@@ -101,7 +101,7 @@ namespace Lesson26.BotMessage
                         logger.LogInformation("Request: chosen color is {color}", Color);
                         await botClient.SendMessage(
                             chatId: update.Message.Chat.Id,
-                            text: "Please enter seed   e.g : Elyor 🫡",
+                            text: "Please enter seed  ",
                             cancellationToken: cancellationToken
                             );
                     }
@@ -288,7 +288,7 @@ namespace Lesson26.BotMessage
 
                         await botClient.SendMessage(
                         chatId: update.CallbackQuery.Message!.Chat.Id,
-                        text: "*Please enter seed :*\n *-e.g : Elyor 🫡*",
+                        text: "*Please enter seed :*\n",
                         parseMode: ParseMode.Markdown,
                         cancellationToken: cancellationToken
                         );
